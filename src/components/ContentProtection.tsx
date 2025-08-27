@@ -33,7 +33,7 @@ export function ContentProtection() {
       // Blur the content when focus is lost (potential screenshot)
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-          document.body.style.filter = 'blur(10px)';
+          //document.body.style.filter = 'blur(10px)';
         } else {
           document.body.style.filter = 'none';
         }
