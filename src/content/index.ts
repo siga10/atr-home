@@ -2,7 +2,7 @@ import { SiteContent } from "./types";
 
 export const contentAR: SiteContent = {
   copy: {
-    brandName: "Your Company Name",
+    brandName: "ART HOME",
     nav: { services: "الخدمات", portfolio: "الأعمال", contact: "تواصل", allProjects: "كل المشاريع" },
     hero: {
       title: "أهلاً وسهلاً بك",
@@ -22,7 +22,7 @@ export const contentAR: SiteContent = {
 
 export const contentEN: SiteContent = {
   copy: {
-    brandName: "Your Company Name",
+    brandName: "ART HOME",
     nav: { services: "Services", portfolio: "Portfolio", contact: "Contact", allProjects: "All Projects" },
     hero: {
       title: "Welcome",

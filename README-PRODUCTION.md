@@ -12,7 +12,7 @@ git init
 git add .
 git commit -m "Initial commit - Villa Finishings Production"
 git branch -M main
-git remote add origin https://github.com/username/villa-finishings.git
+git remote add origin https://github.com/username/ART HOME.git
 git push -u origin main
 ```
 
@@ -107,7 +107,7 @@ src/
 
 ## 🆘 الدعم
 
-- 📧 للدعم التقني: [GitHub Issues](https://github.com/username/villa-finishings/issues)
+- 📧 للدعم التقني: [GitHub Issues](https://github.com/username/ART HOME/issues)
 - 📚 دليل الإعداد الكامل: `SETUP_GUIDE.md`
 
 ---
