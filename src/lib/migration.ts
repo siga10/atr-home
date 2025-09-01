@@ -138,11 +138,11 @@ export class DataMigration {
     try {
       // البحث عن البيانات في مفاتيح localStorage المختلفة
       const possibleKeys = [
-        'villa-finishings-content',
+        'ART HOME-content',
         'site-content',
         'content',
-        'villa-finishings-content-ar',
-        'villa-finishings-content-en'
+        'ART HOME-content-ar',
+        'ART HOME-content-en'
       ];
 
       for (const key of possibleKeys) {
@@ -170,12 +170,12 @@ export class DataMigration {
       
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.includes('villa-finishings')) {
+        if (key && key.includes('ART HOME')) {
           backup[key] = localStorage.getItem(key);
         }
       }
 
-      const backupKey = `villa-finishings-backup-${Date.now()}`;
+      const backupKey = `ART HOME-backup-${Date.now()}`;
       localStorage.setItem(backupKey, JSON.stringify(backup));
       
       console.log(`تم إنشاء نسخة احتياطية في localStorage تحت مفتاح: ${backupKey}`);
@@ -194,7 +194,7 @@ export class DataMigration {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (
-          key.includes('villa-finishings-content') ||
+          key.includes('ART HOME-content') ||
           key.includes('site-content')
         ) && !key.includes('backup')) {
           keysToRemove.push(key);
