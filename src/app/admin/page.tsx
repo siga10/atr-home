@@ -10,7 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/components/AuthProvider";
 import { LogOut, User, Database, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DataMigration } from "@/lib/migration";
+//import { DataMigration } from "@/lib/migration";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserService, type UserInfo } from "@/lib/userService";
 import { EnhancedMediaManager } from "@/components/EnhancedMediaManager";
