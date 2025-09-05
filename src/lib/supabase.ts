@@ -1,40 +1,26 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { Database } from '@/lib/database.types'
+import { createClient } from '@supabase/supabase-js'
 
-// هذا الأسلوب يقوم بإنشاء عميل Supabase جديد لكل طلب على الخادم
-export function createClient() {
-  const cookieStore = cookies()
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    },
-  )
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// يمكنك إبقاء تعريف الواجهات (interfaces) في نفس الملف
+// Database types (سنضيفها لاحقاً حسب الجداول)
 export interface Project {
   id: string
   slug: string
   name: string
   coverUrl: string
-  images: string[]
-  gallery?: any[]
-  scope_items?: string[]
-  scopeItems?: string[]
+  images: string[] // Legacy field - for backward compatibility
+  gallery?: any[] // JSONB array for images and videos with metadata
+  scope_items?: string[] // JSONB array of project scope items (database field)
+  scopeItems?: string[] // camelCase version for frontend compatibility
   duration: string
   location?: string
   tags?: string[]
   content?: string
   category_id?: string
-  featured?: boolean
+  featured?: boolean // Whether project is featured on homepage
   created_at: string
   updated_at: string
 }
