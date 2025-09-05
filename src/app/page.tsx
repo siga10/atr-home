@@ -6,10 +6,6 @@ import HeroSlideshow from "@/components/HeroSlideshow";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { supabase } from "@/lib/supabase";
 
-import HeroSlideshow from "@/components/HeroSlideshow";
-import RevealOnScroll from "@/components/RevealOnScroll";
-import { supabase } from "@/lib/supabase";
-
 export default async function HomePage() {
   // جلب بيانات الشركة
   const { data: company, error: companyError } = await supabase
