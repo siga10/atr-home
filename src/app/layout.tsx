@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   title: "ART HOME | Luxury Interior & Exterior Finishing",
   description: "Luxury interior and exterior finishing: execution, design, supervision and high quality.",
   icons: {
-    icon: "/loge.png", // ضيف الأيقونة هنا
+    icon: "public/loge.png", // ضيف الأيقونة هنا
   },
 };
 
