@@ -1,6 +1,7 @@
 import { createClient } from './supabase' // تم تغيير الاستيراد هنا
 import type { User } from '@supabase/supabase-js'
 
+
 export interface UserRole {
   id: string
   user_id: string
