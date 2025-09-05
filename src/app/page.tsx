@@ -3,27 +3,13 @@ import Image from "next/image";
 import RevealOnScroll from "@/components/RevealOnScroll";
 import HeroSlideshow from "@/components/HeroSlideshow";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { createClient } from "@/lib/supabase"; // استخدام الدالة الجديدة التي تعمل على الخادم
+import { useContent } from "@/components/ContentProvider";
 
-export default async function Home() {
-  // جلب البيانات مباشرة من Supabase على الخادم
-  const supabase = createClient();
-  const [{ data: company, error: companyError }, { data: projects, error: projectsError }] =
-    await Promise.all([
-      supabase.from("company").select("*, slideshow, copy").single(),
-      supabase.from("projects").select("*").order("created_at", { ascending: false }),
-    ]);
-
-  // في حال وجود أي خطأ في جلب البيانات
-  if (companyError || projectsError) {
-    console.error("Failed to load data:", companyError || projectsError);
-    return <p>فشل تحميل البيانات</p>;
-  }
-
-  // الآن، لديك البيانات المتاحة مباشرة في المتغيرات
-  const { slideshow, copy } = company;
-
+export default function Home() {
+  const { content } = useContent();
   return (
+    
+    <div className="font-sans min-h-screen">
     <div className="font-sans min-h-screen">
       <main>
         {/* Hero with slideshow background */}
