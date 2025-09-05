@@ -4,10 +4,10 @@ import Image from "next/image";
 import RevealOnScroll from "@/components/RevealOnScroll";
 import HeroSlideshow from "@/components/HeroSlideshow";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { createClient } from "@/lib/supabase"; // لازم تتأكد عندك هذي الدالة
+import { supabase } from "@/lib/supabase";
 
 export default async function HomePage() {
-  const supabase = createClient();
+const { data, error } = await supabase.from("projects").select("*");
 
   // SSR → جلب البيانات من الداتابيس
   const { data: company, error } = await supabase
