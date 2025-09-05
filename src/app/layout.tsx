@@ -24,6 +24,30 @@ export const metadata: Metadata = {
      icon: "/logo.png", // ضيف الأيقونة هنا
   },
 };
+openGraph: {
+    title: "Villa Finishings | Luxury Interior & Exterior Finishing",
+    description:
+      "Luxury interior and exterior finishing: execution, design, supervision and high quality.",
+    url: "https://www.arthomeco.com/", // استبدل بالدومين تبعك
+    siteName: "Villa Finishings",
+    images: [
+      {
+        url: "/logo.png", // أو صورة أكبر مخصصة (مثلا 1200x630)
+        width: 1200,
+        height: 630,
+        alt: "Villa Finishings Logo",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Villa Finishings | Luxury Interior & Exterior Finishing",
+    description:
+      "Luxury interior and exterior finishing: execution, design, supervision and high quality.",
+    images: ["/logo.png"], // نفس صورة OG
+  },
+};
 
 export default function RootLayout({
   children,
