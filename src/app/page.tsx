@@ -1,4 +1,6 @@
-// لا يوجد "use client" هنا! هذا الآن Server Component
+"use client";
+
+  
 import Image from "next/image";
 import RevealOnScroll from "@/components/RevealOnScroll";
 import HeroSlideshow from "@/components/HeroSlideshow";
