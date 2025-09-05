@@ -7,36 +7,38 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { supabase } from "@/lib/supabase";
 
 export default async function HomePage() {
-  // SSR → جلب البيانات من الداتابيس
-  const { data: company, error } = await supabase
-    .from("company")
-    .select("*")
-    .single();
+  // جلب بيانات الشركة والمشاريع بشكل متزامن لتحسين الأداء
+  const [{ data: company, error: companyError }, { data: projects, error: projectsError }] =
+    await Promise.all([
+      supabase.from("company").select("*").single(),
+      supabase.from("projects").select("*"),
+    ]);
 
-  if (error) {
-    console.error(error);
+  // التعامل مع الأخطاء في حال فشل أي من الاستعلامين
+  if (companyError || projectsError) {
+    console.error("Failed to load data:", companyError || projectsError);
     return <p>فشل تحميل البيانات</p>;
   }
 
   return (
     <div className="font-sans min-h-screen">
       <main>
-        {/* Hero Section */}
+        {/* قسم الأبطال (Hero Section) */}
         <section
           className="relative h-[50vh] md:h-[70vh] overflow-hidden border-b"
           style={{ borderColor: "#c8a94a" }}
         >
           <HeroSlideshow
-            images={company.slideshow || ["/logo.png"]}
+            images={company?.slideshow || ["/logo.png"]}
             heightClass="h-full"
           />
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 max-w-6xl mx-auto px-6 flex items-center">
             <div className="text-white space-y-4 max-w-2xl">
               <h1 className="text-3xl md:text-5xl font-bold leading-[1.2]">
-                {company.name}
+                {company?.name}
               </h1>
-              <p className="text-base md:text-lg">{company.description}</p>
+              <p className="text-base md:text-lg">{company?.description}</p>
               <div className="flex items-center gap-3">
                 <a
                   href="#contact"
@@ -56,13 +58,13 @@ export default async function HomePage() {
           </div>
         </section>
 
-
-        {/* Projects Section */}
+        {/* قسم المشاريع (Projects Section) */}
         <section id="portfolio" className="py-16 bg-[#0a0a0a] text-white">
           <div className="max-w-6xl mx-auto px-6">
             <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center">
               Our Projects
             </h2>
+            {/* تم تعريف متغير projects الآن وتعبئته بالبيانات */}
             {projects && projects.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {projects.map((project) => (
@@ -98,7 +100,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Contact Section */}
+        {/* قسم التواصل (Contact Section) */}
         <section id="contact" className="py-16 border-t border-[#c8a94a]">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
