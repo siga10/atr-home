@@ -1,34 +1,31 @@
 "use client";
 
-  
 import Image from "next/image";
 import RevealOnScroll from "@/components/RevealOnScroll";
+import { useContent } from "@/components/ContentProvider";
 import HeroSlideshow from "@/components/HeroSlideshow";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
-import { useContent } from "@/components/ContentProvider";
 
 export default function Home() {
   const { content } = useContent();
   return (
-    
     <div className="font-sans min-h-screen">
-    <div className="font-sans min-h-screen">
+
       <main>
         {/* Hero with slideshow background */}
         <section className="relative h-[50vh] md:h-[70vh] overflow-hidden border-b" style={{ borderColor: "#c8a94a" }}>
-          {/* استخدام البيانات من المتغيرات مباشرةً */}
-          <HeroSlideshow images={slideshow || ["/vercel.svg", "/globe.svg", "/window.svg"]} heightClass="h-full" />
+          <HeroSlideshow images={content.slideshow || ["/vercel.svg", "/globe.svg", "/window.svg"]} heightClass="h-full" />
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 max-w-6xl mx-auto px-6 flex items-center">
             <div className="text-white space-y-4 max-w-2xl">
-              <h1 className="text-3xl md:text-5xl font-bold leading-[1.2]">{copy.hero.title}</h1>
-              <p className="text-base md:text-lg">{copy.hero.subtitle}</p>
+              <h1 className="text-3xl md:text-5xl font-bold leading-[1.2]">{content.copy.hero.title}</h1>
+              <p className="text-base md:text-lg">{content.copy.hero.subtitle}</p>
               <div className="flex items-center gap-3">
                 <a href="#contact" className="px-5 py-2 rounded-md text-sm" style={{ backgroundColor: "#c8a94a", color: "#0a0a0a" }}>
-                  {copy.hero.ctaPrimary}
+                  {content.copy.hero.ctaPrimary}
                 </a>
                 <a href="#portfolio" className="px-5 py-2 rounded-md text-sm border border-white/30 text-white hover:bg-white/10">
-                  {copy.hero.ctaSecondary}
+                  {content.copy.hero.ctaSecondary}
                 </a>
               </div>
             </div>
@@ -39,7 +36,7 @@ export default function Home() {
         <section id="services">
           <div className="max-w-6xl mx-auto px-6 py-16">
             <RevealOnScroll animation="fadeUp" duration={700}>
-              <h2 className="text-2xl md:text-3xl font-bold mb-8">{copy.services.title}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-8">{content.copy.services.title}</h2>
             </RevealOnScroll>
             
             <div className="grid gap-6 md:grid-cols-3">
@@ -67,11 +64,11 @@ export default function Home() {
         <section id="portfolio">
           <div className="max-w-6xl mx-auto px-6 py-16">
             <RevealOnScroll animation="fadeUp" duration={700}>
-              <h2 className="text-2xl md:text-3xl font-bold mb-8">{copy.portfolio.title}</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-8">{content.copy.portfolio.title}</h2>
             </RevealOnScroll>
             
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {projects.slice(0, 6).map((project, index) => (
+              {content.projects.slice(0, 6).map((project, index) => (
                 <RevealOnScroll 
                   key={project.slug} 
                   animation={index % 3 === 0 ? 'fadeLeft' : index % 3 === 1 ? 'fadeUp' : 'fadeRight'}
@@ -126,7 +123,7 @@ export default function Home() {
                   className="inline-block px-6 py-2 rounded-md text-sm hover:underline transition-all duration-200"
                   style={{ backgroundColor: "#c8a94a", color: "#0a0a0a" }}
                 >
-                  {copy.portfolio.viewAll}
+                  {content.copy.portfolio.viewAll}
                 </a>
               </div>
             </RevealOnScroll>
@@ -136,16 +133,17 @@ export default function Home() {
         {/* Contact */}
         <section id="contact">
           <div className="max-w-6xl mx-auto px-6 py-16">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6">{copy.contact.title}</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-6">{content.copy.contact.title}</h2>
             <form className="grid gap-4 md:max-w-xl">
-              <input className="border rounded-md px-3 py-2 bg-background" style={{ borderColor: "#c8a94a" }} placeholder={copy.contact.name} />
-              <input className="border rounded-md px-3 py-2 bg-background" style={{ borderColor: "#c8a94a" }} placeholder={copy.contact.phone} />
-              <textarea className="border rounded-md px-3 py-2 bg-background" style={{ borderColor: "#c8a94a" }} rows={4} placeholder={copy.contact.description} />
-              <button className="px-5 py-2 rounded-md text-sm w-fit" style={{ backgroundColor: "#c8a94a", color: "#0a0a0a" }}>{copy.contact.submit}</button>
+              <input className="border rounded-md px-3 py-2 bg-background" style={{ borderColor: "#c8a94a" }} placeholder={content.copy.contact.name} />
+              <input className="border rounded-md px-3 py-2 bg-background" style={{ borderColor: "#c8a94a" }} placeholder={content.copy.contact.phone} />
+              <textarea className="border rounded-md px-3 py-2 bg-background" style={{ borderColor: "#c8a94a" }} rows={4} placeholder={content.copy.contact.description} />
+              <button className="px-5 py-2 rounded-md text-sm w-fit" style={{ backgroundColor: "#c8a94a", color: "#0a0a0a" }}>{content.copy.contact.submit}</button>
             </form>
           </div>
         </section>
       </main>
+
     </div>
   );
 }
