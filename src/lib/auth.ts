@@ -1,4 +1,4 @@
-import { createClient } from './supabase'
+import { supabase } from './supabase'
 import type { User } from '@supabase/supabase-js'
 
 export interface AuthUser {
@@ -9,7 +9,6 @@ export interface AuthUser {
 export class AuthService {
   // تسجيل الدخول
   static async signIn(email: string, password: string): Promise<{ user: AuthUser | null; error: string | null }> {
-    const supabase = createClient() // إنشاء عميل جديد لكل طلب
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -38,7 +37,6 @@ export class AuthService {
 
   // إنشاء حساب جديد
   static async signUp(email: string, password: string): Promise<{ user: AuthUser | null; error: string | null }> {
-    const supabase = createClient() // إنشاء عميل جديد لكل طلب
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -67,7 +65,6 @@ export class AuthService {
 
   // تسجيل الخروج
   static async signOut(): Promise<{ error: string | null }> {
-    const supabase = createClient() // إنشاء عميل جديد لكل طلب
     try {
       const { error } = await supabase.auth.signOut()
       if (error) {
@@ -81,10 +78,9 @@ export class AuthService {
 
   // جلب المستخدم الحالي
   static async getCurrentUser(): Promise<AuthUser | null> {
-    const supabase = createClient() // إنشاء عميل جديد لكل طلب
     try {
       const { data, error } = await supabase.auth.getUser()
-      
+      
       if (error || !data.user) {
         return null
       }
@@ -100,8 +96,6 @@ export class AuthService {
 
   // الاستماع لتغييرات المصادقة
   static onAuthStateChange(callback: (user: AuthUser | null) => void) {
-    // ملاحظة: هذا الكود يجب أن يكون ضمن مكون عميل
-    const supabase = createClient()
     return supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         callback({
