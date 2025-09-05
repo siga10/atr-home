@@ -7,25 +7,15 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { supabase } from "@/lib/supabase";
 
 export default async function HomePage() {
-  // جلب بيانات الشركة
-  const { data: company, error: companyError } = await supabase
+  // SSR → جلب البيانات من الداتابيس
+  const { data: company, error } = await supabase
     .from("company")
     .select("*")
     .single();
 
-  // جلب المشاريع
-  const { data: projects, error: projectsError } = await supabase
-    .from("projects")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (companyError) {
-    console.error(companyError);
-    return <p>فشل تحميل بيانات الشركة</p>;
-  }
-
-  if (projectsError) {
-    console.error(projectsError);
+  if (error) {
+    console.error(error);
+    return <p>فشل تحميل البيانات</p>;
   }
 
   return (
@@ -37,16 +27,16 @@ export default async function HomePage() {
           style={{ borderColor: "#c8a94a" }}
         >
           <HeroSlideshow
-            images={company?.slideshow || ["/vercel.svg", "/globe.svg", "/window.svg"]}
+            images={company.slideshow || ["/logo.png"]}
             heightClass="h-full"
           />
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 max-w-6xl mx-auto px-6 flex items-center">
             <div className="text-white space-y-4 max-w-2xl">
               <h1 className="text-3xl md:text-5xl font-bold leading-[1.2]">
-                {company?.name}
+                {company.name}
               </h1>
-              <p className="text-base md:text-lg">{company?.description}</p>
+              <p className="text-base md:text-lg">{company.description}</p>
               <div className="flex items-center gap-3">
                 <a
                   href="#contact"
@@ -65,6 +55,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
 
         {/* Projects Section */}
         <section id="portfolio" className="py-16 bg-[#0a0a0a] text-white">
