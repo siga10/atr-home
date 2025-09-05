@@ -2,13 +2,32 @@
 
 import Image from "next/image";
 import RevealOnScroll from "@/components/RevealOnScroll";
-import { useContent } from "@/components/ContentProvider";
+import { useContent } from "@/lib/supabase";
 import HeroSlideshow from "@/components/HeroSlideshow";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-export default function Home() {
-  const { content } = useContent();
+export default async function HomePage() {
+  const supabase = createClient();
+
+  // SSR → بجيب البيانات قبل ما يوصل HTML
+  const { data: company, error } = await supabase
+    .from("company")
+    .select("*")
+    .single();
+
+  if (error) {
+    console.error(error);
+    return <p>فشل تحميل البيانات</p>;
+  }
+
   return (
+    <main>
+      <h1>{company.name}</h1>
+      <p>{company.description}</p>
+      <img src={company.logo_url} alt={company.name} />
+    </main>
+  );
+}
     <div className="font-sans min-h-screen">
 
       <main>
