@@ -24,6 +24,7 @@ export const metadata: Metadata = {
      icon: "/logo.png", // ضيف الأيقونة هنا
   },
 };
+
 export default function RootLayout({
   children,
 }: Readonly<{
