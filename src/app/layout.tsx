@@ -18,8 +18,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Villa Finishings | Luxury Interior & Exterior Finishing",
+  title: "ART HOME | Luxury Interior & Exterior Finishing",
   description: "Luxury interior and exterior finishing: execution, design, supervision and high quality.",
+  icons: {
+    icon: "/loge.png", // ضيف الأيقونة هنا
+  },
 };
 
 export default function RootLayout({
