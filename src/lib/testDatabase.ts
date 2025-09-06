@@ -117,3 +117,17 @@ export async function runAllTests() {
     return false;
   }
 }
+// Content CRUD Operations
+export class ContentService {
+  // جلب المحتوى بالـ key
+  static async get(key: string): Promise<any> { ... }
+
+  // حفظ أو تحديث المحتوى
+  static async set(key: string, value: any): Promise<boolean> { ... }
+
+  // جلب جميع المحتويات
+  static async getAll(): Promise<Record<string, any>> { ... }
+
+  // تحديث محتوى الموقع العام
+  static async updateSiteContent(content: { hero?: any; brandName?: string; socials?: any; slideshow?: string[] }): Promise<boolean> { ... }
+}
