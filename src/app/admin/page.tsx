@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useContent } from "@/components/ContentProvider";
 import { useState, useRef, useEffect } from "react";
 import { Project, ProjectMedia, Category } from "@/content/types";
 import { ProjectService, ContentService, CategoryService } from "@/lib/dataService";
-import type { Project as SupabaseProject } from "@/lib/supabase";
+// Removed SupabaseProject import - using Project from types instead
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/components/AuthProvider";
 import { LogOut, User, Database, Users, Shield } from "lucide-react";
@@ -14,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserService, type UserInfo } from "@/lib/userService";
 import { EnhancedMediaManager } from "@/components/EnhancedMediaManager";
+import { testDatabaseConnection, testProjectCreation, runAllTests } from "@/lib/testDatabase";
 
-type AdminTab = "projects" | "featured" | "categories" | "slideshow" | "content" | "media" | "social" | "settings" | "users" | "migration";
+type AdminTab = "projects" | "featured" | "categories" | "slideshow" | "content" | "media" | "social" | "hero" | "slider-buttons" | "settings" | "users" | "migration" | "database-test";
 
 function AdminPageContent() {
   const { content, setContent, lang, refreshProjects } = useContent();
@@ -49,6 +49,41 @@ function AdminPageContent() {
   // Load categories for project form
   const [projectCategories, setProjectCategories] = useState<Category[]>([]);
   const [loadingProjectCategories, setLoadingProjectCategories] = useState(false);
+  
+  // Database test state
+  const [testResults, setTestResults] = useState<{
+    connection: boolean | null;
+    projects: boolean | null;
+    overall: boolean | null;
+    message: string;
+  }>({ connection: null, projects: null, overall: null, message: '' });
+  const [isTesting, setIsTesting] = useState(false);
+  
+  // Social media state
+  const [socialMedia, setSocialMedia] = useState({
+    whatsapp: '',
+    instagram: '',
+    facebook: '',
+    tiktok: ''
+  });
+  
+  // Hero section state
+  const [heroSection, setHeroSection] = useState({
+    enabled: false,
+    title: '',
+    description: '',
+    image: '',
+    buttonText: '',
+    buttonLink: '',
+    backgroundColor: '#f8f9fa',
+    titleColor: '#1a1a1a',
+    textColor: '#666',
+    buttonColor: '#c8a94a',
+    buttonTextColor: '#0a0a0a'
+  });
+  
+  // Slider buttons state
+  const [slideButtons, setSlideButtons] = useState<Array<{ text: string; link: string; type: 'primary' | 'secondary' }>>([]);
 
   const addProject = async () => {
     if (!newProject.name || !newProject.slug) {
@@ -67,7 +102,7 @@ function AdminPageContent() {
       // Convert file to base64
       const reader = new FileReader();
       reader.onload = async () => {
-        const supabaseProject: Omit<SupabaseProject, 'id' | 'created_at' | 'updated_at'> = {
+        const supabaseProject: Omit<Project, 'id' | 'created_at' | 'updated_at'> = {
           slug: newProject.slug!,
           name: newProject.name!,
           duration: newProject.duration || "1 month",
@@ -75,7 +110,11 @@ function AdminPageContent() {
           tags: newProject.tags || [],
           coverUrl: reader.result as string,
           images: [],
-          content: undefined
+          gallery: [],
+          scopeItems: newProject.scopeItems || [],
+          content: undefined,
+          category_id: newProject.category_id,
+          featured: newProject.featured || false
         };
 
         // Save to Supabase
@@ -117,13 +156,34 @@ function AdminPageContent() {
     setEditingProject(null);
   };
 
-  const deleteProject = (slug: string) => {
+  const deleteProject = async (slug: string) => {
     if (confirm("Are you sure you want to delete this project?")) {
-      const updatedContent = {
-        ...content,
-        projects: content.projects.filter(p => p.slug !== slug)
-      };
-      setContent(updatedContent);
+      try {
+        setIsLoading(true);
+        // Find the project to get its ID
+        const project = content.projects.find(p => p.slug === slug);
+        if (project && project.id) {
+          // Delete from database
+          await ProjectService.delete(project.id);
+          console.log('Project deleted from database:', project.id);
+        }
+        
+        // Update local state
+        const updatedContent = {
+          ...content,
+          projects: content.projects.filter(p => p.slug !== slug)
+        };
+        setContent(updatedContent);
+        
+        // Refresh projects from database
+        await refreshProjects();
+        console.log('Project deleted successfully');
+      } catch (error) {
+        console.error('Error deleting project:', error);
+        setError('Failed to delete project');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -250,30 +310,31 @@ function AdminPageContent() {
 
   const handleMigration = async () => {
     setIsMigrating(true);
-    setMigrationStatus({ message: "Migrating data...", type: "info" });
+    setMigrationStatus({ message: "Fetching data from database...", type: "info" });
 
     try {
-      const result = await DataMigration.migrateFromLocalStorage();
-      
+      // استرداد البيانات من قاعدة البيانات فقط
+      const result = await DataMigration.fetchFromDatabase();
+
       if (result.success) {
         setMigrationStatus({
-          message: result.message,
+          message: result.message || "Data fetched successfully from database.",
           type: "success"
         });
-        // Update data in interface
+        // تحديث البيانات في الواجهة
         await refreshProjects();
       } else {
         setMigrationStatus({
-          message: result.message,
+          message: result.message || "Failed to fetch data from database.",
           type: "error"
         });
       }
     } catch (error) {
       setMigrationStatus({
-        message: "An unexpected error occurred during migration",
+        message: "An unexpected error occurred during fetch",
         type: "error"
       });
-      console.error("Migration error:", error);
+      console.error("Fetch error:", error);
     } finally {
       setIsMigrating(false);
     }
@@ -479,6 +540,162 @@ function AdminPageContent() {
     }
   };
 
+  // Database test functions
+  const handleConnectionTest = async () => {
+    setIsTesting(true);
+    setTestResults({ connection: null, projects: null, overall: null, message: 'Testing database connection...' });
+    
+    try {
+      const result = await testDatabaseConnection();
+      setTestResults(prev => ({ 
+        ...prev, 
+        connection: result, 
+        message: result ? 'Database connection successful!' : 'Database connection failed!' 
+      }));
+    } catch (error) {
+      setTestResults(prev => ({ 
+        ...prev, 
+        connection: false, 
+        message: 'Database connection test failed: ' + error 
+      }));
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleProjectTest = async () => {
+    setIsTesting(true);
+    setTestResults(prev => ({ ...prev, message: 'Testing project operations...' }));
+    
+    try {
+      const result = await testProjectCreation();
+      setTestResults(prev => ({ 
+        ...prev, 
+        projects: result, 
+        message: result ? 'Project operations successful!' : 'Project operations failed!' 
+      }));
+    } catch (error) {
+      setTestResults(prev => ({ 
+        ...prev, 
+        projects: false, 
+        message: 'Project operations test failed: ' + error 
+      }));
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleFullTest = async () => {
+    setIsTesting(true);
+    setTestResults({ connection: null, projects: null, overall: null, message: 'Running comprehensive database tests...' });
+    
+    try {
+      const result = await runAllTests();
+      setTestResults({ 
+        connection: result, 
+        projects: result, 
+        overall: result, 
+        message: result ? 'All database tests passed successfully!' : 'Some database tests failed!' 
+      });
+    } catch (error) {
+      setTestResults({ 
+        connection: false, 
+        projects: false, 
+        overall: false, 
+        message: 'Database tests failed: ' + error 
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const clearTestResults = () => {
+    setTestResults({ connection: null, projects: null, overall: null, message: '' });
+  };
+
+  // Social media functions
+  const saveSocialMedia = async () => {
+    try {
+      setIsLoading(true);
+      // Save to content overrides
+      const updatedContent = {
+        ...content,
+        socialMedia: socialMedia
+      };
+      setContent(updatedContent);
+      
+      // Save to database
+      await ContentService.update('social_media', socialMedia);
+      
+      alert('Social media links saved successfully!');
+    } catch (error) {
+      console.error('Error saving social media:', error);
+      alert('Failed to save social media links');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Hero section functions
+  const saveHeroSection = async () => {
+    try {
+      setIsLoading(true);
+      // Save to content overrides
+      const updatedContent = {
+        ...content,
+        heroSection: heroSection
+      };
+      setContent(updatedContent);
+      
+      // Save to database
+      await ContentService.update('hero_section', heroSection);
+      
+      alert('Hero section saved successfully!');
+    } catch (error) {
+      console.error('Error saving hero section:', error);
+      alert('Failed to save hero section');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Slider buttons functions
+  const saveSlideButtons = async () => {
+    try {
+      setIsLoading(true);
+      // Save to content overrides
+      const updatedContent = {
+        ...content,
+        slideButtons: slideButtons
+      };
+      setContent(updatedContent);
+      
+      // Save to database
+      await ContentService.update('slide_buttons', slideButtons);
+      
+      alert('Slider buttons saved successfully!');
+    } catch (error) {
+      console.error('Error saving slider buttons:', error);
+      alert('Failed to save slider buttons');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addSlideButton = () => {
+    setSlideButtons([...slideButtons, { text: '', link: '', type: 'primary' }]);
+  };
+
+  const removeSlideButton = (index: number) => {
+    setSlideButtons(slideButtons.filter((_, i) => i !== index));
+  };
+
+  const updateSlideButton = (index: number, field: string, value: any) => {
+    const updated = [...slideButtons];
+    updated[index] = { ...updated[index], [field]: value };
+    setSlideButtons(updated);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow-sm border-b">
@@ -512,8 +729,11 @@ function AdminPageContent() {
               { id: "content", label: "Content", icon: "📝" },
               { id: "media", label: "Media", icon: "🎬" },
               { id: "social", label: "Social Links", icon: "🔗" },
+              { id: "hero", label: "Hero Section", icon: "🎯" },
+              { id: "slider-buttons", label: "Slider Buttons", icon: "🔘" },
               { id: "users", label: "Users", icon: "👥" },
               { id: "migration", label: "Data Migration", icon: "📦" },
+              { id: "database-test", label: "Database Test", icon: "🔧" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -584,6 +804,18 @@ function AdminPageContent() {
                   {loadingProjectCategories && (
                     <p className="text-xs text-gray-500 mt-1">Loading categories...</p>
                   )}
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm font-medium text-gray-700 mb-1">Featured Project</label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={newProject.featured || false}
+                      onChange={(e) => setNewProject({...newProject, featured: e.target.checked})}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-gray-600">Mark as featured project</span>
+                  </label>
                 </div>
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-gray-700 mb-1">Cover Image</label>
@@ -1666,6 +1898,347 @@ function AdminPageContent() {
                   )}
                 </div>
               </div>
+              
+              <div className="pt-4 border-t">
+                <button
+                  onClick={saveSocialMedia}
+                  disabled={isLoading}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    isLoading 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  {isLoading ? 'Saving...' : 'Save Social Media Links'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "hero" && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Hero Section Management</h2>
+            <div className="space-y-6">
+              {/* Enable/Disable */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="heroEnabled"
+                  checked={heroSection.enabled}
+                  onChange={(e) => setHeroSection({...heroSection, enabled: e.target.checked})}
+                  className="rounded"
+                />
+                <label htmlFor="heroEnabled" className="text-sm font-medium text-gray-700">
+                  Enable Hero Section
+                </label>
+              </div>
+
+              {heroSection.enabled && (
+                <>
+                  {/* Basic Content */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Title
+                      </label>
+                      <input
+                        type="text"
+                        value={heroSection.title}
+                        onChange={(e) => setHeroSection({...heroSection, title: e.target.value})}
+                        className="w-full border rounded-md px-3 py-2"
+                        placeholder="Enter hero title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Button Text
+                      </label>
+                      <input
+                        type="text"
+                        value={heroSection.buttonText}
+                        onChange={(e) => setHeroSection({...heroSection, buttonText: e.target.value})}
+                        className="w-full border rounded-md px-3 py-2"
+                        placeholder="Enter button text"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={heroSection.description}
+                      onChange={(e) => setHeroSection({...heroSection, description: e.target.value})}
+                      className="w-full border rounded-md px-3 py-2"
+                      rows={3}
+                      placeholder="Enter hero description"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Image URL
+                      </label>
+                      <input
+                        type="url"
+                        value={heroSection.image}
+                        onChange={(e) => setHeroSection({...heroSection, image: e.target.value})}
+                        className="w-full border rounded-md px-3 py-2"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Button Link
+                      </label>
+                      <input
+                        type="url"
+                        value={heroSection.buttonLink}
+                        onChange={(e) => setHeroSection({...heroSection, buttonLink: e.target.value})}
+                        className="w-full border rounded-md px-3 py-2"
+                        placeholder="https://example.com or /projects/specific-project"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Colors */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Background Color
+                      </label>
+                      <input
+                        type="color"
+                        value={heroSection.backgroundColor}
+                        onChange={(e) => setHeroSection({...heroSection, backgroundColor: e.target.value})}
+                        className="w-full h-10 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Title Color
+                      </label>
+                      <input
+                        type="color"
+                        value={heroSection.titleColor}
+                        onChange={(e) => setHeroSection({...heroSection, titleColor: e.target.value})}
+                        className="w-full h-10 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Text Color
+                      </label>
+                      <input
+                        type="color"
+                        value={heroSection.textColor}
+                        onChange={(e) => setHeroSection({...heroSection, textColor: e.target.value})}
+                        className="w-full h-10 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Button Color
+                      </label>
+                      <input
+                        type="color"
+                        value={heroSection.buttonColor}
+                        onChange={(e) => setHeroSection({...heroSection, buttonColor: e.target.value})}
+                        className="w-full h-10 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Button Text Color
+                      </label>
+                      <input
+                        type="color"
+                        value={heroSection.buttonTextColor}
+                        onChange={(e) => setHeroSection({...heroSection, buttonTextColor: e.target.value})}
+                        className="w-full h-10 border rounded-md"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="pt-4 border-t">
+                    <h3 className="text-lg font-medium mb-4">Preview</h3>
+                    <div className="border rounded-lg p-4" style={{ backgroundColor: heroSection.backgroundColor }}>
+                      <div className="grid md:grid-cols-2 gap-4 items-center">
+                        <div className="order-2 md:order-1">
+                          <div className="aspect-[4/3] bg-gray-200 rounded-lg flex items-center justify-center">
+                            {heroSection.image ? (
+                              <img src={heroSection.image} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                            ) : (
+                              <span className="text-gray-500">No image</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="order-1 md:order-2 space-y-4">
+                          <h2 style={{ color: heroSection.titleColor }}>
+                            {heroSection.title || 'Hero Title'}
+                          </h2>
+                          <p style={{ color: heroSection.textColor }}>
+                            {heroSection.description || 'Hero description goes here...'}
+                          </p>
+                          {heroSection.buttonText && (
+                            <button
+                              className="px-4 py-2 rounded-md text-sm"
+                              style={{ 
+                                backgroundColor: heroSection.buttonColor, 
+                                color: heroSection.buttonTextColor 
+                              }}
+                            >
+                              {heroSection.buttonText}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="pt-4 border-t">
+                    <button
+                      onClick={saveHeroSection}
+                      disabled={isLoading}
+                      className={`px-4 py-2 rounded-md text-white ${
+                        isLoading 
+                          ? 'bg-gray-400 cursor-not-allowed' 
+                          : 'bg-indigo-600 hover:bg-indigo-700'
+                      }`}
+                    >
+                      {isLoading ? 'Saving...' : 'Save Hero Section'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "slider-buttons" && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Slider Buttons Management</h2>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Manage buttons that appear on the hero slideshow. You can add up to 3 buttons.
+                </p>
+                <button
+                  onClick={addSlideButton}
+                  disabled={slideButtons.length >= 3}
+                  className={`px-4 py-2 rounded-md text-sm ${
+                    slideButtons.length >= 3
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  }`}
+                >
+                  Add Button
+                </button>
+              </div>
+
+              {slideButtons.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No buttons added yet. Click "Add Button" to get started.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {slideButtons.map((button, index) => (
+                    <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-medium">Button {index + 1}</h3>
+                        <button
+                          onClick={() => removeSlideButton(index)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Button Text
+                          </label>
+                          <input
+                            type="text"
+                            value={button.text}
+                            onChange={(e) => updateSlideButton(index, 'text', e.target.value)}
+                            className="w-full border rounded-md px-3 py-2"
+                            placeholder="Enter button text"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Link
+                          </label>
+                          <input
+                            type="text"
+                            value={button.link}
+                            onChange={(e) => updateSlideButton(index, 'link', e.target.value)}
+                            className="w-full border rounded-md px-3 py-2"
+                            placeholder="#contact or /projects/specific"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Type
+                          </label>
+                          <select
+                            value={button.type}
+                            onChange={(e) => updateSlideButton(index, 'type', e.target.value)}
+                            className="w-full border rounded-md px-3 py-2"
+                          >
+                            <option value="primary">Primary (Gold)</option>
+                            <option value="secondary">Secondary (White)</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Preview */}
+                      <div className="mt-4 pt-4 border-t">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
+                        <div className="flex items-center gap-3">
+                          <a
+                            href={button.link || '#'}
+                            className={`px-5 py-2 rounded-md text-sm transition-all duration-200 ${
+                              button.type === 'primary'
+                                ? 'text-black'
+                                : 'border border-gray-300 text-gray-700'
+                            }`}
+                            style={{
+                              backgroundColor: button.type === 'primary' ? '#c8a94a' : 'transparent'
+                            }}
+                          >
+                            {button.text || 'Button Text'}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Save Button */}
+              <div className="pt-4 border-t">
+                <button
+                  onClick={saveSlideButtons}
+                  disabled={isLoading}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    isLoading 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  {isLoading ? 'Saving...' : 'Save Slider Buttons'}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1896,18 +2469,9 @@ function AdminPageContent() {
 
             <div className="space-y-6">
               <div className="border rounded-lg p-4 bg-gray-50">
-                <h3 className="font-medium mb-3">Local Data Information</h3>
+                <h3 className="font-medium mb-3">Database Data Information</h3>
                 <div className="text-sm text-gray-600 space-y-2">
-                  {(() => {
-                    const info = getLocalStorageInfo();
-                    return (
-                      <div>
-                        <p><strong>Data exists:</strong> {info.hasData ? 'Yes ✅' : 'No ❌'}</p>
-                        <p><strong>Number of projects:</strong> {info.projectsCount}</p>
-                        <p><strong>Data sections:</strong> {info.contentKeys.join(', ') || 'None'}</p>
-                      </div>
-                    );
-                  })()}
+                  <p>All data is now fetched directly from the database. LocalStorage is no longer used.</p>
                 </div>
               </div>
 
@@ -1915,51 +2479,193 @@ function AdminPageContent() {
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <h4 className="font-medium text-yellow-800 mb-2">⚠️ Important Notice</h4>
                   <ul className="text-sm text-yellow-700 space-y-1">
-                    <li>• All data will be migrated from local storage to Supabase database</li>
-                    <li>• A backup of local data will be created automatically</li>
-                    <li>• Make sure you have internet connection before starting migration</li>
-                    <li>• The process may take several minutes depending on data amount</li>
+                    <li>• All data is now managed in the Supabase database</li>
+                    <li>• Local data migration is disabled</li>
+                    <li>• Make sure you have internet connection for database operations</li>
                   </ul>
                 </div>
 
                 <div className="flex space-x-3">
                   <Button
                     onClick={handleMigration}
-                    disabled={isMigrating || !getLocalStorageInfo().hasData}
+                    disabled={isMigrating}
                     className="flex items-center space-x-2"
                   >
                     {isMigrating && <Database className="h-4 w-4 animate-spin" />}
-                    <span>{isMigrating ? 'Migrating...' : 'Start Data Migration'}</span>
+                    <span>{isMigrating ? 'Fetching...' : 'Fetch Data from Database'}</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "database-test" && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center space-x-3 mb-6">
+              <Database className="h-6 w-6 text-green-600" />
+              <h2 className="text-xl font-semibold">Database Connection Test</h2>
+            </div>
+            
+            {testResults.message && (
+              <Alert className={`mb-6 ${
+                testResults.overall === true ? 'border-green-500 bg-green-50' :
+                testResults.overall === false ? 'border-red-500 bg-red-50' :
+                'border-blue-500 bg-blue-50'
+              }`}>
+                <AlertDescription className={`${
+                  testResults.overall === true ? 'text-green-800' :
+                  testResults.overall === false ? 'text-red-800' :
+                  'text-blue-800'
+                }`}>
+                  {testResults.message}
+                </AlertDescription>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearTestResults}
+                  className="mt-2 text-xs"
+                >
+                  Clear
+                </Button>
+              </Alert>
+            )}
+
+            <div className="space-y-6">
+              {/* Test Status Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className={`p-4 rounded-lg border-2 ${
+                  testResults.connection === true ? 'border-green-500 bg-green-50' :
+                  testResults.connection === false ? 'border-red-500 bg-red-50' :
+                  'border-gray-300 bg-gray-50'
+                }`}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className={`text-2xl ${
+                      testResults.connection === true ? 'text-green-600' :
+                      testResults.connection === false ? 'text-red-600' :
+                      'text-gray-400'
+                    }`}>
+                      {testResults.connection === true ? '✅' :
+                       testResults.connection === false ? '❌' : '⏳'}
+                    </span>
+                    <h3 className="font-medium">Connection Test</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {testResults.connection === true ? 'Database connection working' :
+                     testResults.connection === false ? 'Connection failed' :
+                     'Not tested yet'}
+                  </p>
+                </div>
+
+                <div className={`p-4 rounded-lg border-2 ${
+                  testResults.projects === true ? 'border-green-500 bg-green-50' :
+                  testResults.projects === false ? 'border-red-500 bg-red-50' :
+                  'border-gray-300 bg-gray-50'
+                }`}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className={`text-2xl ${
+                      testResults.projects === true ? 'text-green-600' :
+                      testResults.projects === false ? 'text-red-600' :
+                      'text-gray-400'
+                    }`}>
+                      {testResults.projects === true ? '✅' :
+                       testResults.projects === false ? '❌' : '⏳'}
+                    </span>
+                    <h3 className="font-medium">Project Operations</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {testResults.projects === true ? 'Project CRUD working' :
+                     testResults.projects === false ? 'Project operations failed' :
+                     'Not tested yet'}
+                  </p>
+                </div>
+
+                <div className={`p-4 rounded-lg border-2 ${
+                  testResults.overall === true ? 'border-green-500 bg-green-50' :
+                  testResults.overall === false ? 'border-red-500 bg-red-50' :
+                  'border-gray-300 bg-gray-50'
+                }`}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className={`text-2xl ${
+                      testResults.overall === true ? 'text-green-600' :
+                      testResults.overall === false ? 'text-red-600' :
+                      'text-gray-400'
+                    }`}>
+                      {testResults.overall === true ? '🎉' :
+                       testResults.overall === false ? '⚠️' : '🔧'}
+                    </span>
+                    <h3 className="font-medium">Overall Status</h3>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {testResults.overall === true ? 'All tests passed' :
+                     testResults.overall === false ? 'Some tests failed' :
+                     'Ready to test'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Test Buttons */}
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    onClick={handleConnectionTest}
+                    disabled={isTesting}
+                    className="flex items-center space-x-2"
+                  >
+                    {isTesting && <Database className="h-4 w-4 animate-spin" />}
+                    <span>Test Connection</span>
                   </Button>
 
                   <Button
+                    onClick={handleProjectTest}
+                    disabled={isTesting}
                     variant="outline"
-                    onClick={() => {
-                      if (confirm('Are you sure you want to clear local data? Make sure migration is complete first.')) {
-                        DataMigration.clearLocalStorageData();
-                        setMigrationStatus({
-                          message: 'Local data cleared successfully',
-                          type: 'success'
-                        });
-                      }
-                    }}
-                    disabled={!getLocalStorageInfo().hasData}
+                    className="flex items-center space-x-2"
                   >
-                    Clear Local Data
+                    {isTesting && <Database className="h-4 w-4 animate-spin" />}
+                    <span>Test Projects</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleFullTest}
+                    disabled={isTesting}
+                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+                  >
+                    {isTesting && <Database className="h-4 w-4 animate-spin" />}
+                    <span>Run All Tests</span>
+                  </Button>
+
+                  <Button
+                    onClick={clearTestResults}
+                    disabled={isTesting}
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                  >
+                    <span>Clear Results</span>
                   </Button>
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">Migration Steps:</h4>
-                <ol className="text-sm text-gray-600 space-y-2">
-                  <li>1. Check for data existence in local storage</li>
-                  <li>2. Create backup of local data</li>
-                  <li>3. Migrate projects to Supabase</li>
-                  <li>4. Migrate general content and settings</li>
-                  <li>5. Verify operation success</li>
-                  <li>6. Clear local data (optional)</li>
-                </ol>
+              {/* Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-800 mb-2">📋 Test Instructions</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• <strong>Test Connection:</strong> Verifies basic database connectivity and authentication</li>
+                  <li>• <strong>Test Projects:</strong> Tests project creation, reading, updating, and deletion</li>
+                  <li>• <strong>Run All Tests:</strong> Comprehensive test suite covering all database operations</li>
+                  <li>• Check the browser console for detailed test logs and error messages</li>
+                </ul>
+              </div>
+
+              {/* Database Information */}
+              <div className="bg-gray-50 border rounded-lg p-4">
+                <h4 className="font-medium mb-3">Database Configuration</h4>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p>• <strong>Database:</strong> Supabase PostgreSQL</p>
+                  <p>• <strong>Tables:</strong> projects, categories, content, user_roles</p>
+                  <p>• <strong>Authentication:</strong> Supabase Auth with RLS policies</p>
+                  <p>• <strong>Environment:</strong> {process.env.NODE_ENV || 'development'}</p>
+                </div>
               </div>
             </div>
           </div>

@@ -106,7 +106,6 @@ function FilterableMediaGallery({ slug }: { slug: string }) {
     );
   }
   
-  const hasBeforeAfter = project.gallery.some((m) => m.variant === "before" || m.variant === "after");
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const filtered = project.gallery.filter((m) => {
@@ -118,9 +117,6 @@ function FilterableMediaGallery({ slug }: { slug: string }) {
 
   return (
     <div>
-      {hasBeforeAfter && (
-        <BeforeAfterGrid slug={slug} />
-      )}
       <h2 className="text-xl font-semibold mt-8 mb-4">Media Gallery</h2>
       <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
         {(
@@ -166,48 +162,3 @@ function FilterableMediaGallery({ slug }: { slug: string }) {
     </div>
   );
 }
-
-function BeforeAfterGrid({ slug }: { slug: string }) {
-  const { content } = useContent();
-  let project = content.projects.find(p => p.slug === slug);
-  
-  // Fallback to local data if no project found in database
-  if (!project) {
-    project = getProjectBySlug(slug);
-  }
-  
-  if (!project || !project.gallery) {
-    return null;
-  }
-  
-  const before = project.gallery.filter((m) => m.variant === "before");
-  const after = project.gallery.filter((m) => m.variant === "after");
-
-  if (before.length === 0 && after.length === 0) {
-    return null;
-  }
-
-  return (
-    <div>
-      <h2 className="text-xl font-semibold mb-6">Before / After Comparison</h2>
-      <div className="grid gap-8 md:grid-cols-2">
-        {before.length > 0 && (
-          <div>
-            <h3 className="text-lg font-medium mb-3 text-red-600">Before</h3>
-            <MediaGallery media={before} className="" />
-          </div>
-        )}
-        {after.length > 0 && (
-          <div>
-            <h3 className="text-lg font-medium mb-3 text-green-600">After</h3>
-            <MediaGallery media={after} className="" />
-          </div>
-        )}
-      </div>
-      <div className="mt-4 pt-4 border-t text-sm text-gray-500 text-center">
-        Click on any image to view it in full size and navigate through the gallery
-      </div>
-    </div>
-  );
-}
-

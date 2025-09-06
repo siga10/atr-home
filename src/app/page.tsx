@@ -14,20 +14,19 @@ export default function Home() {
       <main>
         {/* Hero with slideshow background */}
         <section className="relative h-[50vh] md:h-[70vh] overflow-hidden border-b" style={{ borderColor: "#c8a94a" }}>
-          <HeroSlideshow images={content.slideshow || ["/vercel.svg", "/globe.svg", "/window.svg"]} heightClass="h-full" />
+          <HeroSlideshow 
+            images={content.slideshow || ["/vercel.svg", "/globe.svg", "/window.svg"]} 
+            heightClass="h-full"
+            buttons={content.slideButtons || [
+              { text: content.copy.hero.ctaPrimary, link: "#contact", type: "primary" },
+              { text: content.copy.hero.ctaSecondary, link: "#portfolio", type: "secondary" }
+            ]}
+          />
           <div className="absolute inset-0 bg-black/40" />
           <div className="absolute inset-0 max-w-6xl mx-auto px-6 flex items-center">
             <div className="text-white space-y-4 max-w-2xl">
               <h1 className="text-3xl md:text-5xl font-bold leading-[1.2]">{content.copy.hero.title}</h1>
               <p className="text-base md:text-lg">{content.copy.hero.subtitle}</p>
-              <div className="flex items-center gap-3">
-                <a href="#contact" className="px-5 py-2 rounded-md text-sm" style={{ backgroundColor: "#c8a94a", color: "#0a0a0a" }}>
-                  {content.copy.hero.ctaPrimary}
-                </a>
-                <a href="#portfolio" className="px-5 py-2 rounded-md text-sm border border-white/30 text-white hover:bg-white/10">
-                  {content.copy.hero.ctaSecondary}
-                </a>
-              </div>
             </div>
           </div>
         </section>
@@ -59,6 +58,53 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Custom Hero Section */}
+        {content.heroSection && content.heroSection.enabled && (
+          <section className="py-16" style={{ backgroundColor: content.heroSection.backgroundColor || '#f8f9fa' }}>
+            <div className="max-w-6xl mx-auto px-6">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                {/* Image */}
+                <div className="order-2 md:order-1">
+                  <RevealOnScroll animation="fadeLeft" duration={700}>
+                    <div className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                      <Image 
+                        src={content.heroSection.image || '/vercel.svg'} 
+                        alt={content.heroSection.title || 'Hero Image'} 
+                        fill 
+                        className="object-cover" 
+                      />
+                    </div>
+                  </RevealOnScroll>
+                </div>
+                
+                {/* Content */}
+                <div className="order-1 md:order-2 space-y-6">
+                  <RevealOnScroll animation="fadeRight" duration={700}>
+                    <h2 className="text-3xl md:text-4xl font-bold" style={{ color: content.heroSection.titleColor || '#1a1a1a' }}>
+                      {content.heroSection.title}
+                    </h2>
+                    <p className="text-lg" style={{ color: content.heroSection.textColor || '#666' }}>
+                      {content.heroSection.description}
+                    </p>
+                    {content.heroSection.buttonText && content.heroSection.buttonLink && (
+                      <a 
+                        href={content.heroSection.buttonLink}
+                        className="inline-block px-6 py-3 rounded-md text-sm font-medium transition-all duration-200 hover:opacity-90"
+                        style={{ 
+                          backgroundColor: content.heroSection.buttonColor || '#c8a94a', 
+                          color: content.heroSection.buttonTextColor || '#0a0a0a' 
+                        }}
+                      >
+                        {content.heroSection.buttonText}
+                      </a>
+                    )}
+                  </RevealOnScroll>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Portfolio */}
         <section id="portfolio">

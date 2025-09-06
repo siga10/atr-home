@@ -179,7 +179,15 @@ export function EnhancedMediaManager({ projectSlug, gallery, onUpdate }: Enhance
   const handleDeleteMedia = async (mediaId: string) => {
     try {
       const updatedGallery = gallery.filter(m => m.id !== mediaId);
-      const success = await ProjectService.updateGallery(projectSlug, updatedGallery);
+      
+      // Find the project to get its ID
+      const project = await ProjectService.getBySlug(projectSlug);
+      if (!project || !project.id) {
+        alert('Project not found');
+        return;
+      }
+      
+      const success = await ProjectService.updateGallery(project.id, updatedGallery);
       
       if (success) {
         onUpdate(updatedGallery);

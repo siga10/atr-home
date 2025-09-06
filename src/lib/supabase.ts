@@ -21,6 +21,7 @@ export interface Project {
   tags?: string[]
   content?: string
   category_id?: string
+  category?: any // Category object from join
   featured?: boolean // Whether project is featured on homepage
   created_at: string
   updated_at: string

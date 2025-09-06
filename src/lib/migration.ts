@@ -1,6 +1,6 @@
 import { ProjectService, ContentService } from "./dataService";
 import { defaultContent } from "@/content/default";
-import type { Project as SupabaseProject } from "./supabase";
+import type { Project as SupabaseProject } from "@/content/types";
 import type { SiteContent } from "@/content/types";
 
 interface LocalStorageProject {
@@ -60,7 +60,11 @@ export class DataMigration {
               tags: project.tags || [],
               coverUrl: project.coverUrl,
               images: project.gallery?.map(item => item.url) || [],
-              content: project.scopeItems ? JSON.stringify({ scopeItems: project.scopeItems }) : undefined
+              gallery: project.gallery || [],
+              scopeItems: project.scopeItems || [],
+              content: project.scopeItems ? JSON.stringify({ scopeItems: project.scopeItems }) : undefined,
+              category_id: undefined,
+              featured: false
             };
 
             const created = await ProjectService.create(supabaseProject);
@@ -127,6 +131,35 @@ export class DataMigration {
       return {
         success: false,
         message: "حدث خطأ غير متوقع أثناء الترحيل: " + (error as Error).message
+      };
+    }
+  }
+
+  /**
+   * استرداد البيانات فقط من قاعدة البيانات
+   */
+  static async fetchFromDatabase(): Promise<{
+    success: boolean;
+    projects?: any[];
+    content?: any;
+    message?: string;
+  }> {
+    try {
+      // جلب المشاريع من قاعدة البيانات
+      const projects = await ProjectService.getAll();
+      // جلب المحتوى العام من قاعدة البيانات
+      const content = await ContentService.getAll();
+
+      return {
+        success: true,
+        projects,
+        content,
+        message: "تم الاسترداد بنجاح من قاعدة البيانات فقط"
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: "حدث خطأ أثناء الاسترداد من قاعدة البيانات: " + (error as Error).message
       };
     }
   }

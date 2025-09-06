@@ -18,8 +18,7 @@ type ContentContextValue = {
 
 const ContentContext = createContext<ContentContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "site-content-overrides";
-const LANG_KEY = "site-lang";
+// تم إزالة localStorage - نعتمد على قاعدة البيانات فقط
 
 export function ContentProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
@@ -31,8 +30,11 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('Loading data from Supabase...');
+        
         // تحميل المشاريع
         const projectsData = await ProjectService.getAll();
+        console.log('Loaded projects:', projectsData.length);
         setProjects(projectsData);
 
         // تحميل إعدادات المحتوى المحفوظة
@@ -42,8 +44,14 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
         const arContent = await ContentService.get('content-overrides-ar');
         const enContent = await ContentService.get('content-overrides-en');
         
-        if (arContent) contentOverrides.ar = arContent;
-        if (enContent) contentOverrides.en = enContent;
+        if (arContent) {
+          contentOverrides.ar = arContent;
+          console.log('Loaded Arabic content overrides');
+        }
+        if (enContent) {
+          contentOverrides.en = enContent;
+          console.log('Loaded English content overrides');
+        }
         
         if (Object.keys(contentOverrides).length > 0) {
           setOverrides(contentOverrides);
@@ -53,18 +61,14 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
         const savedLang = await ContentService.get('site-lang');
         if (savedLang && (savedLang === 'ar' || savedLang === 'en')) {
           setLangState(savedLang);
+          console.log('Loaded saved language:', savedLang);
         }
+        
+        console.log('Data loaded successfully from Supabase');
       } catch (error) {
         console.error('Error loading data from Supabase:', error);
-        // Fallback to localStorage
-        const savedLang = (typeof window !== "undefined" && (localStorage.getItem(LANG_KEY) as Lang)) || null;
-        if (savedLang) setLangState(savedLang);
-        const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
-        if (raw) {
-          try {
-            setOverrides(JSON.parse(raw));
-          } catch {}
-        }
+        // لا نستخدم localStorage كـ fallback - نعتمد على قاعدة البيانات فقط
+        console.warn('Falling back to default content due to database error');
       } finally {
         setLoading(false);
       }
@@ -82,10 +86,13 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
 
   const setLang = async (l: Lang) => {
     setLangState(l);
-    // حفظ اللغة في Supabase
-    await ContentService.set('site-lang', l);
-    // Fallback to localStorage
-    if (typeof window !== "undefined") localStorage.setItem(LANG_KEY, l);
+    try {
+      // حفظ اللغة في Supabase
+      await ContentService.set('site-lang', l);
+      console.log('Language saved to Supabase:', l);
+    } catch (error) {
+      console.error('Error saving language to Supabase:', error);
+    }
   };
 
   const base = useMemo<SiteContent>(() => (lang === "ar" ? contentAR : contentEN), [lang]);
@@ -99,10 +106,13 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
     const next = { ...overrides, [lang]: c } as Partial<Record<Lang, SiteContent>>;
     setOverrides(next);
     
-    // حفظ المحتوى في Supabase
-    await ContentService.set(`content-overrides-${lang}`, c);
-    // Fallback to localStorage
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    try {
+      // حفظ المحتوى في Supabase
+      await ContentService.set(`content-overrides-${lang}`, c);
+      console.log('Content saved to Supabase for language:', lang);
+    } catch (error) {
+      console.error('Error saving content to Supabase:', error);
+    }
   };
 
   const value = useMemo(() => ({ 
@@ -112,8 +122,14 @@ export function ContentProvider({ children }: { children: React.ReactNode }) {
     setContent, 
     loading, 
     refreshProjects: async () => {
-      const projectsData = await ProjectService.getAll();
-      setProjects(projectsData);
+      try {
+        console.log('Refreshing projects from Supabase...');
+        const projectsData = await ProjectService.getAll();
+        setProjects(projectsData);
+        console.log('Projects refreshed successfully:', projectsData.length);
+      } catch (error) {
+        console.error('Error refreshing projects:', error);
+      }
     }
   }), [lang, content, loading]);
 
