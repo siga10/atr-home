@@ -1,5 +1,5 @@
 // ملف اختبار الاتصال بقاعدة البيانات
-import { ProjectService, CategoryService, ContentService } from './dataService';
+import { ProjectService, CategoryService, ContentService } from '@/lib/dataService';
 
 export async function testDatabaseConnection() {
   console.log('🔍 Testing database connection...');
